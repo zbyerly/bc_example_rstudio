@@ -6,7 +6,7 @@ MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearc
 Include: yum
 
 %labels
-Zach is making this.
+Zach Byerly is making this.
 
 %help
 This is a super basic CentOS 6 based singularity container that I'm going to try to install RStudio on.
@@ -21,22 +21,6 @@ This is a super basic CentOS 6 based singularity container that I'm going to try
   curl -L https://download2.rstudio.org/rstudio-server-rhel-1.1.463-x86_64.rpm -o rstudio-server-rhel-1.1.463-x86_64.rpm
   yum install -y R rstudio-server-rhel-1.1.463-x86_64.rpm
 
-#  systemctl stop rstudio-server.service
-#  systemctl disable rstudio-server.service
-
-
-
-
-%apprun rserver
- if ! [[ "$USER_PATH" = "" ]]; then
-   export PATH="$USER_PATH"
- fi
-
- exec rserver "${@}"
-
 %runscript
-  if ! [[ "$USER_PATH" = "" ]]; then
-    export PATH="$USER_PATH"
-  fi
-
-  exec rserver "${@}"
+  
+  /usr/lib/rstudio-server/bin/rserver "${@}"
