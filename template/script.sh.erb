@@ -4,10 +4,12 @@
 setup_env () {
   # Additional environment which could be moved into a module
   # Change these to suit
-  export RSTUDIO_SERVER_IMAGE="/apps/rserver-launcher-centos7.simg"
+  export RSTUDIO_SERVER_IMAGE="/home/admin/singularity/running-rstudio.simg"
   export SINGULARITY_BINDPATH="/etc,/media,/mnt,/opt,/srv,/usr,/var"
   export PATH="$PATH:/usr/lib/rstudio-server/bin"
   export SINGULARITYENV_PATH="$PATH"
+  export USER_PATH="$PATH"
+  module load r/3.5.3/INTEL-18.0.0
 }
 setup_env
 
@@ -30,10 +32,12 @@ sed 's/^ \{2\}//' > "${RSESSION_WRAPPER_FILE}" << EOL
 
   exec &>>"\${RSESSION_LOG_FILE}"
 
+  echo "s_env PATH: \${SINGULARITYENV_PATH}"
+
   # Launch the original command
   echo "Launching rsession..."
   set -x
-  exec rsession --r-libs-user "${R_LIBS_USER}" "\${@}"
+  exec rsession --r-libs-user "\${R_LIBS_USER}" "\${@}"
 EOL
 )
 chmod 700 "${RSESSION_WRAPPER_FILE}"
@@ -51,11 +55,24 @@ set -x
 # Launch the RStudio Server
 echo "Starting up rserver..."
 
-singularity run -B "$TMPDIR:/tmp" "$RSTUDIO_SERVER_IMAGE" \
+echo "sing env path: ${SINGULARITYENV_PATH}"
+echo "path: ${PATH}"
+
+RSERVER_BIN="/usr/lib/rstudio-server/bin/rserver"
+
+singularity exec -B "$TMPDIR:/tmp" "$RSTUDIO_SERVER_IMAGE" "$RSERVER_BIN" \
  --www-port "${port}" \
  --auth-none 0 \
  --auth-pam-helper-path "${RSTUDIO_AUTH}" \
  --auth-encrypt-password 0 \
  --rsession-path "${RSESSION_WRAPPER_FILE}"
+
+
+#singularity run -B "$TMPDIR:/tmp" "$RSTUDIO_SERVER_IMAGE" \
+# --www-port "${port}" \
+# --auth-none 0 \
+# --auth-pam-helper-path "${RSTUDIO_AUTH}" \
+# --auth-encrypt-password 0 \
+# --rsession-path "${RSESSION_WRAPPER_FILE}"
 
 echo 'Singularity as exited...'
