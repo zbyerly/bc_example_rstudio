@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
+set -x
 
-# Load the required environment
-setup_env () {
-  # Additional environment which could be moved into a module
-  # Change these to suit
-  export RSTUDIO_SERVER_IMAGE="/home/admin/singularity/running-rstudio.simg"
-  export SINGULARITY_BINDPATH="/etc,/media,/mnt,/opt,/srv,/usr,/var"
-  export PATH="$PATH:/usr/lib/rstudio-server/bin"
-  export SINGULARITYENV_PATH="$PATH"
-  export USER_PATH="$PATH"
-  module load r/3.5.3/INTEL-18.0.0
-}
-setup_env
+
+#module load r/3.5.3/INTEL-18.0.0
+export RSTUDIO_SERVER_IMAGE="/home/admin/singularity/rstudio.simg"
+#export SINGULARITY_BINDPATH="/etc,/media,/mnt,/opt,/srv,/usr,/var"
+#export SINGULARITY_BINDPATH="/etc,/media,/mnt,/opt,/srv,/var"
+export PATH="$PATH:/usr/lib/rstudio-server/bin"
+export SINGULARITYENV_PATH="$PATH"
+export USER_PATH="$PATH"
 
 #
 # Start RStudio Server
@@ -20,27 +17,6 @@ setup_env
 # PAM auth helper used by RStudio
 export RSTUDIO_AUTH="${PWD}/bin/auth"
 
-# Generate an `rsession` wrapper script
-export RSESSION_WRAPPER_FILE="${PWD}/rsession.sh"
-(
-umask 077
-sed 's/^ \{2\}//' > "${RSESSION_WRAPPER_FILE}" << EOL
-  #!/usr/bin/env bash
-
-  # Log all output from this script
-  export RSESSION_LOG_FILE="${PWD}/rsession.log"
-
-  exec &>>"\${RSESSION_LOG_FILE}"
-
-  echo "s_env PATH: \${SINGULARITYENV_PATH}"
-
-  # Launch the original command
-  echo "Launching rsession..."
-  set -x
-  exec rsession --r-libs-user "\${R_LIBS_USER}" "\${@}"
-EOL
-)
-chmod 700 "${RSESSION_WRAPPER_FILE}"
 
 # Set working directory to home directory
 cd "${HOME}"
@@ -51,21 +27,40 @@ mkdir -p "$TMPDIR/rstudio-server"
 python -c 'from uuid import uuid4; print(uuid4())' > "$TMPDIR/rstudio-server/secure-cookie-key"
 chmod 0600 "$TMPDIR/rstudio-server/secure-cookie-key"
 
-set -x
 # Launch the RStudio Server
 echo "Starting up rserver..."
 
 echo "sing env path: ${SINGULARITYENV_PATH}"
 echo "path: ${PATH}"
 
-RSERVER_BIN="/usr/lib/rstudio-server/bin/rserver"
+echo "${port}" > portnum.txt
 
-singularity exec -B "$TMPDIR:/tmp" "$RSTUDIO_SERVER_IMAGE" "$RSERVER_BIN" \
+#singularity exec \
+# -B "$TMPDIR:/tmp" \
+# ${RSTUDIO_SERVER_IMAGE} \
+# rsession --r-libs-user "${R_LIBS_USER}" \
+# --www-port "${port}" \
+# --auth-none 0 \
+# --auth-pam-helper-path "${RSTUDIO_AUTH}" \
+# --auth-encrypt-password 0
+#"\${@}"
+
+singularity run \
+ -B "$TMPDIR:/tmp" \
+ ${RSTUDIO_SERVER_IMAGE} \
  --www-port "${port}" \
  --auth-none 0 \
  --auth-pam-helper-path "${RSTUDIO_AUTH}" \
- --auth-encrypt-password 0 \
- --rsession-path "${RSESSION_WRAPPER_FILE}"
+ --auth-encrypt-password 0
+
+echo ""
+
+#RSERVER_BIN="/usr/lib/rstudio-server/bin/rserver"
+#RSERVER_BIN="rsession"
+
+#singularity exec "$RSTUDIO_SERVER_IMAGE" "which $RSERVER_BIN"
+
+#singularity run -B "$TMPDIR:/tmp" "$RSTUDIO_SERVER_IMAGE" \
 
 
 #singularity run -B "$TMPDIR:/tmp" "$RSTUDIO_SERVER_IMAGE" \
@@ -75,4 +70,4 @@ singularity exec -B "$TMPDIR:/tmp" "$RSTUDIO_SERVER_IMAGE" "$RSERVER_BIN" \
 # --auth-encrypt-password 0 \
 # --rsession-path "${RSESSION_WRAPPER_FILE}"
 
-echo 'Singularity as exited...'
+echo 'Singularity has exited...'
