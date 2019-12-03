@@ -1,0 +1,42 @@
+# Ensure that the guest is the same OS type as the compute hosts that it will run on
+# Here we use CentOS 6
+Bootstrap: yum
+OSVersion: 6
+MirrorURL: http://mirror.centos.org/centos-%{OSVERSION}/%{OSVERSION}/os/$basearch/
+Include: yum
+
+%labels
+Zach is making this.
+
+%help
+This is a super basic CentOS 6 based singularity container that I'm going to try to install RStudio on.
+
+
+%post
+  yum install -y yum-utils
+  yum-config-manager --add-repo https://turbovnc.org/pmwiki/uploads/Downloads/TurboVNC.repo
+  yum install -y epel-release
+  yum install -y nc python-websockify singularity turbovnc 
+
+  curl -L https://download2.rstudio.org/rstudio-server-rhel-1.1.463-x86_64.rpm -o rstudio-server-rhel-1.1.463-x86_64.rpm
+  yum install -y R rstudio-server-rhel-1.1.463-x86_64.rpm
+
+#  systemctl stop rstudio-server.service
+#  systemctl disable rstudio-server.service
+
+
+
+
+%apprun rserver
+ if ! [[ "$USER_PATH" = "" ]]; then
+   export PATH="$USER_PATH"
+ fi
+
+ exec rserver "${@}"
+
+%runscript
+  if ! [[ "$USER_PATH" = "" ]]; then
+    export PATH="$USER_PATH"
+  fi
+
+  exec rserver "${@}"
